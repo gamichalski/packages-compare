@@ -1,7 +1,13 @@
 <template>
   <div class="field has-addons is-fullwidth">
-    <div class="control is-expanded">
-      <div class="dropdown is-active is-fullwidth">
+    <div
+      class="control is-expanded is-large"
+      :class="{ 'is-loading': isLoading }"
+    >
+      <div
+        class="dropdown is-fullwidth"
+        :class="{ 'is-active': !isEmptySuggestions }"
+      >
         <input
           class="input is-large is-fullwidth"
           v-model="filter"
@@ -37,21 +43,39 @@ export default {
   data() {
     return {
       filter: "",
+      isLoading: false,
       packagesSuggestions: []
     };
   },
+  computed: {
+    isEmptySuggestions() {
+      return this.packagesSuggestions.length === 0;
+    }
+  },
   methods: {
     onFilterSuggestions: debounce(function() {
-      searchPackages(this.filter).then(({ data }) => {
-        this.packagesSuggestions = data;
-      });
+      this.isLoading = true;
+      if (this.filter) {
+        searchPackages(this.filter)
+          .then(({ data }) => {
+            this.packagesSuggestions = data;
+          })
+          .finally(() => {
+            this.isLoading = false;
+          });
+      } else {
+        this.packagesSuggestions = [];
+        this.isLoading = false;
+      }
     }, 300),
     onClickSuggestion(packageValue) {
       getPackageInfo(
         packageValue.package.name,
         packageValue.package.version
       ).then(({ data }) => {
-        console.log(data);
+        this.$emit("found", data);
+        this.filter = "";
+        this.packagesSuggestions = [];
       });
     }
   }
