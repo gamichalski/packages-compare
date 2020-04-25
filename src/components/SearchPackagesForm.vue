@@ -10,6 +10,7 @@
       >
         <input
           class="input is-large is-fullwidth"
+          :class="{ 'is-danger': $v.$invalid }"
           v-model="filter"
           @keyup="onFilterSuggestions"
         />
@@ -26,6 +27,13 @@
           </div>
         </div>
       </div>
+      <p
+        class="help is-danger"
+        v-for="(errorMessage, index) in filterErrorMessages"
+        :key="index"
+      >
+        {{ errorMessage }}
+      </p>
     </div>
     <div class="control">
       <a class="button is-large" @click="onFilterSuggestions">
@@ -36,7 +44,9 @@
 </template>
 
 <script>
+import { maxLength } from "vuelidate/lib/validators";
 import { searchPackages, getPackageInfo } from "@/services/packages";
+import { getValidatorMessages } from "@/utils/validators";
 import debounce from "lodash/debounce";
 
 export default {
@@ -47,7 +57,16 @@ export default {
       packagesSuggestions: []
     };
   },
+  validations: {
+    filter: {
+      noWhitespaces: value => !value.includes(" "),
+      maxLength: maxLength(20)
+    }
+  },
   computed: {
+    filterErrorMessages() {
+      return getValidatorMessages(this.$v.filter);
+    },
     isEmptySuggestions() {
       return this.packagesSuggestions.length === 0;
     }
@@ -55,7 +74,7 @@ export default {
   methods: {
     onFilterSuggestions: debounce(function() {
       this.isLoading = true;
-      if (this.filter) {
+      if (this.filter && !this.$v.$invalid) {
         searchPackages(this.filter)
           .then(({ data }) => {
             this.packagesSuggestions = data;
